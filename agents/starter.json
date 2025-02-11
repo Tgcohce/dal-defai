@@ -33,12 +33,17 @@
        {
          "name": "sonic",
          "network": "mainnet"
+       },
+       {
+         "name": "telegram"
+
        }
      ],
      "tasks": [
        {"name": "post-tweet", "weight": 1},
        {"name": "reply-to-tweet", "weight": 1},
-       {"name": "like-tweet", "weight": 1}
+       {"name": "like-tweet", "weight": 1},
+       {"name": "send-message", "weight": 1}
      ],
      "use_time_based_weights": false,
      "time_based_multipliers": {
