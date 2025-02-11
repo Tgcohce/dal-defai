@@ -1,6 +1,16 @@
 import requests
 from getTransactions import GetTransactions
 
+"""_summary_
+    This class returns True or False depending on if the wallet is flagged for burner activities
+    A burner is an account that recives a transaction, 
+    then instantly sends that transaction away multiple times.
+
+    Returns:
+        _type_: Boolean 
+        _description_ Returns True or False depending on if the account acts like a burner
+     """
+
 class isBurner:
     
     #Takes in wallet address, api key

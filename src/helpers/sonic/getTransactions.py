@@ -1,5 +1,12 @@
 import requests
 
+"""_summary_ 
+    returns an array of all the transaction for the given wallet in json format. 
+    uses etherscan api
+
+    Returns: a array of transaction for the given wallet. 
+        _type_: Array _description_ all transactions in a wallet.
+    """
 class getTransactions:
     def __init__(self, wallet_address, api_key):
         self.wallet_address = wallet_address
