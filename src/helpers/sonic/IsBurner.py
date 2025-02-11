@@ -29,6 +29,7 @@ class isBurner:
         
         received = {}
         sent = {}
+        burner_count = 0
         
         for tx in transactions:
             from_addr = tx["from"].lower()
@@ -47,7 +48,9 @@ class isBurner:
             for s_data in sent.items():
                 time_diff = abs(s_data["timeStamp"] - r_data["timeStamp"])
                 if abs(r_data["value"] - s_data["value"]) < 0.001 and time_diff < 600:
-                    return True
+                    burner_count += 1
+                    if burner_count > 3: 
+                        return True
         
         
         return False
