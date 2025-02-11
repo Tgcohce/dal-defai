@@ -1,8 +1,8 @@
 import os
 import logging
-from typing import Dict, Any, List
-from dotenv import load_dotenv, set_key
-from telegram import Bot, Update, InlineKeyboardButton, InlineKeyboardMarkup
+from typing import Dict, Any
+from dotenv import load_dotenv
+from telegram import Update
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -13,9 +13,12 @@ from telegram.ext import (
 )
 from src.connections.base_connection import BaseConnection, Action, ActionParameter
 
+# Configure logging
 logger = logging.getLogger("connections.telegram_connection")
+logging.basicConfig(level=logging.INFO)
 
 
+# Custom exceptions
 class TelegramConnectionError(Exception):
     """Base exception for Telegram connection errors"""
     pass
@@ -31,52 +34,115 @@ class TelegramAPIError(TelegramConnectionError):
     pass
 
 
-class TelegramConnection(BaseConnection):
-    def __init__(self, config: Dict[str, Any]):
-        """
-        Initialize the Telegram connection using the python-telegram-bot Application.
-        Expects that the following environment variables are set:
-          - TELEGRAM_BOT_TOKEN: The bot token provided by BotFather.
-        """
-        super().__init__(config)
-        load_dotenv()
-        self.bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-        if not self.bot_token:
-            raise TelegramConfigurationError("Missing TELEGRAM_BOT_TOKEN in environment.")
+# Define a callable Action that wraps a handler function.
+class CallableAction(Action):
+    def __init__(self, name, parameters, description, handler):
+        super().__init__(name=name, parameters=parameters, description=description)
+        self.handler = handler
 
-        self.app = Application.builder().token(self.bot_token).build()
-        self.register_actions()
-        self._register_handlers()
+    def __call__(self, **kwargs):
+        return self.handler(**kwargs)
+
+
+class TelegramConnection(BaseConnection):
+    # This name is used to identify the connection (e.g., by the connection manager/CLI).
+    name = "telegram"
+
+    @property
+    def is_llm_provider(self) -> bool:
+        """This connection is not an LLM provider."""
+        return False
 
     def validate_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Validate the configuration.
-        For Telegram, you may need to supply additional settings such as webhook URL,
-        polling interval, etc. For now, we require no additional keys.
+        Validate and return the configuration.
+        Extend this to check for additional keys if needed.
         """
-        # You can expand this as needed.
         return config
+
+    def configure(self, **kwargs) -> bool:
+        """
+        Optionally update the connection configuration.
+        Here we verify that the required environment variables exist.
+        """
+        if not os.getenv("TELEGRAM_BOT_TOKEN"):
+            raise TelegramConfigurationError("Missing TELEGRAM_BOT_TOKEN in environment.")
+        if not os.getenv("TELEGRAM_CHAT_ID"):
+            raise TelegramConfigurationError("Missing TELEGRAM_CHAT_ID in environment.")
+        logger.info("✅ SUCCESSFULLY CONFIGURED CONNECTION: telegram")
+        return True
+
+    def is_configured(self, verbose: bool = False) -> bool:
+        """
+        Check if the connection is properly configured.
+        """
+        return bool(self.bot_token)
 
     def register_actions(self) -> None:
         """
         Register available Telegram actions.
-        Here we define a few basic actions; you can extend these as needed.
+        We register the "send-message" action as a CallableAction instance.
+        Since the chat ID is read from the environment, only the "message" parameter is required.
         """
-        self.actions = {
-            "send-message": Action(
-                name="send-message",
-                parameters=[
-                    ActionParameter("chat_id", True, int, "ID of the target chat"),
-                    ActionParameter("message", True, str, "Message text to send")
-                ],
-                description="Send a text message to a Telegram chat"
-            ),
-            # You can register additional actions as needed.
-        }
+        self.actions["send-message"] = CallableAction(
+            name="send-message",
+            parameters=[
+                ActionParameter("message", True, str, "Message text to send"),
+            ],
+            description="Send a text message to a Telegram chat",
+            handler=self._handle_send_message_action
+        )
+
+    def __init__(self, config: Dict[str, Any]):
+        """
+        Initialize the Telegram connection.
+        The Telegram Application (self.app) is set up before calling the BaseConnection
+        __init__ so that register_actions (invoked by the base class) can safely use self.app.
+        """
+        load_dotenv()
+        self.bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+        if not self.bot_token:
+            raise TelegramConfigurationError("Missing TELEGRAM_BOT_TOKEN in environment.")
+        # Create the Telegram bot Application.
+        self.app = Application.builder().token(self.bot_token).build()
+        # Now call the BaseConnection __init__.
+        super().__init__(config)
+        # Register command and message handlers.
+        self._register_handlers()
+
+    def perform_action(self, *args, **kwargs):
+        """
+        Override perform_action to support CLI calls that pass extra positional arguments.
+
+        The CLI calls it like:
+            perform_action(connection, action, params=...)
+        Since the connection is already this instance, we ignore the extra connection argument.
+        """
+        if len(args) >= 2:
+            # Assume args[0] is the connection name and args[1] is the action name.
+            action_name = args[1]
+        elif len(args) == 1:
+            action_name = args[0]
+        else:
+            raise ValueError("No action specified")
+        return super().perform_action(action_name, **kwargs)
+
+    def _handle_send_message_action(self, **kwargs):
+        """
+        Handler for the "send-message" action.
+        It validates parameters, reads the chat ID from the environment, and schedules the asynchronous send.
+        """
+        message = kwargs.get("message")
+        chat_id_env = os.getenv("TELEGRAM_CHAT_ID")
+        if not chat_id_env:
+            raise TelegramConfigurationError("Missing TELEGRAM_CHAT_ID in environment.")
+        chat_id = int(chat_id_env)
+        # run_async schedules the coroutine for execution.
+        return self.app.run_async(self.send_message(chat_id, message))
 
     async def send_message(self, chat_id: int, message: str) -> None:
         """
-        Send a text message to a Telegram chat.
+        Asynchronously send a text message to a Telegram chat.
         """
         try:
             await self.app.bot.send_message(chat_id=chat_id, text=message)
@@ -87,14 +153,11 @@ class TelegramConnection(BaseConnection):
 
     def _register_handlers(self) -> None:
         """
-        Register command and message handlers for incoming updates.
-        For production, you might use webhooks. Here we demonstrate using polling.
+        Register Telegram update handlers (commands, messages, callbacks).
+        Here we use polling mode; for production you might prefer webhooks.
         """
-        # Basic start command handler
         self.app.add_handler(CommandHandler("start", self._start))
-        # Example echo handler for any text message
         self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self._echo))
-        # Handler for inline button callbacks, if needed
         self.app.add_handler(CallbackQueryHandler(self._callback_handler))
 
     async def _start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -106,7 +169,7 @@ class TelegramConnection(BaseConnection):
 
     async def _echo(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
-        Echo the received message.
+        Echo the received text message.
         """
         chat_id = update.effective_chat.id
         text = update.message.text
@@ -119,33 +182,11 @@ class TelegramConnection(BaseConnection):
         query = update.callback_query
         await query.answer()
         data = query.data
-        # Example: simple navigation based on callback data
         await query.edit_message_text(text=f"Button clicked: {data}")
 
     def run(self) -> None:
         """
-        Run the bot in polling mode.
-        For production, you might set up a webhook instead.
+        Start the Telegram bot in polling mode.
         """
         logger.info("Starting Telegram bot polling...")
         self.app.run_polling()
-
-    def perform_action(self, action_name: str, kwargs: Dict[str, Any]) -> Any:
-        """
-        Execute a Telegram action based on the registered actions.
-        For example, 'send-message' calls self.send_message().
-        """
-        if action_name not in self.actions:
-            raise KeyError(f"Unknown action: {action_name}")
-        action = self.actions[action_name]
-        errors = action.validate_params(kwargs)
-        if errors:
-            raise ValueError(f"Invalid parameters: {', '.join(errors)}")
-
-        if action_name == "send-message":
-            chat_id = kwargs.get("chat_id")
-            message = kwargs.get("message")
-            # Since send_message is async, we need to run it in the event loop.
-            return self.app.run_async(self.send_message(chat_id, message))
-        else:
-            raise NotImplementedError(f"Action '{action_name}' not implemented.")
