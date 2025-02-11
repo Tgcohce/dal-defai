@@ -21,6 +21,7 @@ class getTransactions:
         
         #If data return the results.
         if data["status"] == "1":
-            return data["result"]
+            transactions = data["result"][:10000] #Limit to first 10,000 transactions
+            return transactions
         else:
             return [] #If data is empty return an empty list    

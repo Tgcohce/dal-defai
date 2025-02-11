@@ -29,7 +29,7 @@ class isBurner:
         
         received = {}
         sent = {}
-        burner_count = 0
+        burner_count = 0 #Check for 10 burner like activities before being classified. 
         
         for tx in transactions:
             from_addr = tx["from"].lower()
