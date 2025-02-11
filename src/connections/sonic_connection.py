@@ -17,21 +17,22 @@ class SonicConnectionError(Exception):
     """Base exception for Sonic connection errors"""
     pass
 
+
 class SonicConnection(BaseConnection):
-    
+
     def __init__(self, config: Dict[str, Any]):
         logger.info("Initializing Sonic connection...")
         self._web3 = None
-        
+
         # Get network configuration
         network = config.get("network", "mainnet")
         if network not in SONIC_NETWORKS:
             raise ValueError(f"Invalid network '{network}'. Must be one of: {', '.join(SONIC_NETWORKS.keys())}")
-            
+
         network_config = SONIC_NETWORKS[network]
         self.explorer = network_config["scanner_url"]
         self.rpc_url = network_config["rpc_url"]
-        
+
         super().__init__(config)
         self._initialize_web3()
         self.ERC20_ABI = ERC20_ABI
@@ -49,7 +50,7 @@ class SonicConnection(BaseConnection):
             self._web3.middleware_onion.inject(geth_poa_middleware, layer=0)
             if not self._web3.is_connected():
                 raise SonicConnectionError("Failed to connect to Sonic network")
-            
+
             try:
                 chain_id = self._web3.eth.chain_id
                 logger.info(f"Connected to network with chain ID: {chain_id}")
@@ -66,10 +67,11 @@ class SonicConnection(BaseConnection):
         missing = [field for field in required if field not in config]
         if missing:
             raise ValueError(f"Missing config fields: {', '.join(missing)}")
-        
+
         if config["network"] not in SONIC_NETWORKS:
-            raise ValueError(f"Invalid network '{config['network']}'. Must be one of: {', '.join(SONIC_NETWORKS.keys())}")
-            
+            raise ValueError(
+                f"Invalid network '{config['network']}'. Must be one of: {', '.join(SONIC_NETWORKS.keys())}")
+
         return config
 
     def get_token_by_ticker(self, ticker: str) -> Optional[str]:
@@ -77,7 +79,7 @@ class SonicConnection(BaseConnection):
         try:
             if ticker.lower() in ["s", "S"]:
                 return "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
-                
+
             response = requests.get(
                 f"https://api.dexscreener.com/latest/dex/search?q={ticker}"
             )
@@ -93,8 +95,7 @@ class SonicConnection(BaseConnection):
             sonic_pairs.sort(key=lambda x: x.get("fdv", 0), reverse=True)
 
             sonic_pairs = [
-                pair
-                for pair in sonic_pairs
+                pair for pair in sonic_pairs
                 if pair.get("baseToken", {}).get("symbol", "").lower() == ticker.lower()
             ]
 
@@ -219,12 +220,12 @@ class SonicConnection(BaseConnection):
             raise
 
     def transfer(self, to_address: str, amount: float, token_address: Optional[str] = None) -> str:
-        """Transfer $S or tokens to an address"""
+        """Send $S or tokens to an address"""
         try:
             private_key = os.getenv('SONIC_PRIVATE_KEY')
             account = self._web3.eth.account.from_key(private_key)
             chain_id = self._web3.eth.chain_id
-            
+
             if token_address:
                 contract = self._web3.eth.contract(
                     address=Web3.to_checksum_address(token_address),
@@ -232,7 +233,7 @@ class SonicConnection(BaseConnection):
                 )
                 decimals = contract.functions.decimals().call()
                 amount_raw = int(amount * (10 ** decimals))
-                
+
                 tx = contract.functions.transfer(
                     Web3.to_checksum_address(to_address),
                     amount_raw
@@ -254,21 +255,16 @@ class SonicConnection(BaseConnection):
 
             signed = account.sign_transaction(tx)
             tx_hash = self._web3.eth.send_raw_transaction(signed.rawTransaction)
-
-            # Log and return explorer link immediately
             tx_link = self._get_explorer_link(tx_hash.hex())
             return f"⛓️ Transfer transaction sent: {tx_link}"
 
         except Exception as e:
-            logger.error(f"Transfer failed: {e}")
+            logger.error(f"Failed to send $S: {e}")
             raise
 
     def _get_swap_route(self, token_in: str, token_out: str, amount_in: float) -> Dict:
         """Get the best swap route from Kyberswap API"""
         try:
-            # Handle native token address
-            
-            # Convert amount to raw value
             if token_in.lower() == self.NATIVE_TOKEN.lower():
                 amount_raw = self._web3.to_wei(amount_in, 'ether')
             else:
@@ -278,8 +274,7 @@ class SonicConnection(BaseConnection):
                 )
                 decimals = token_contract.functions.decimals().call()
                 amount_raw = int(amount_in * (10 ** decimals))
-            
-            # Set up API request
+
             url = f"{self.aggregator_api}/routes"
             headers = {"x-client-id": "ZerePyBot"}
             params = {
@@ -288,16 +283,14 @@ class SonicConnection(BaseConnection):
                 "amountIn": str(amount_raw),
                 "gasInclude": "true"
             }
-            
+
             response = requests.get(url, headers=headers, params=params)
             response.raise_for_status()
-            
             data = response.json()
             if data.get("code") != 0:
                 raise SonicConnectionError(f"API error: {data.get('message')}")
-                
             return data["data"]
-                
+
         except Exception as e:
             logger.error(f"Failed to get swap route: {e}")
             raise
@@ -307,49 +300,46 @@ class SonicConnection(BaseConnection):
         try:
             private_key = os.getenv('SONIC_PRIVATE_KEY')
             account = self._web3.eth.account.from_key(private_key)
-            
+
             url = f"{self.aggregator_api}/route/build"
             headers = {"x-client-id": "zerepy"}
-            
+
             payload = {
                 "routeSummary": route_summary,
                 "sender": account.address,
                 "recipient": account.address,
-                "slippageTolerance": int(slippage * 100),  # Convert to bps
-                "deadline": int(time.time() + 1200),  # 20 minutes
+                "slippageTolerance": int(slippage * 100),
+                "deadline": int(time.time() + 1200),
                 "source": "ZerePyBot"
             }
-            
+
             response = requests.post(url, headers=headers, json=payload)
             response.raise_for_status()
-            
             data = response.json()
             if data.get("code") != 0:
                 raise SonicConnectionError(f"API error: {data.get('message')}")
-                
             return data["data"]["data"]
-                
+
         except Exception as e:
             logger.error(f"Failed to encode swap data: {e}")
             raise
-    
+
     def _handle_token_approval(self, token_address: str, spender_address: str, amount: int) -> None:
         """Handle token approval for spender"""
         try:
             private_key = os.getenv('SONIC_PRIVATE_KEY')
             account = self._web3.eth.account.from_key(private_key)
-            
+
             token_contract = self._web3.eth.contract(
                 address=Web3.to_checksum_address(token_address),
                 abi=self.ERC20_ABI
             )
-            
-            # Check current allowance
+
             current_allowance = token_contract.functions.allowance(
                 account.address,
                 spender_address
             ).call()
-            
+
             if current_allowance < amount:
                 approve_tx = token_contract.functions.approve(
                     spender_address,
@@ -360,14 +350,12 @@ class SonicConnection(BaseConnection):
                     'gasPrice': self._web3.eth.gas_price,
                     'chainId': self._web3.eth.chain_id
                 })
-                
+
                 signed_approve = account.sign_transaction(approve_tx)
                 tx_hash = self._web3.eth.send_raw_transaction(signed_approve.rawTransaction)
                 logger.info(f"Approval transaction sent: {self._get_explorer_link(tx_hash.hex())}")
-                
-                # Wait for approval to be mined
                 self._web3.eth.wait_for_transaction_receipt(tx_hash)
-                
+
         except Exception as e:
             logger.error(f"Approval failed: {e}")
             raise
@@ -378,27 +366,20 @@ class SonicConnection(BaseConnection):
             private_key = os.getenv('SONIC_PRIVATE_KEY')
             account = self._web3.eth.account.from_key(private_key)
 
-            # Check token balance before proceeding
             current_balance = self.get_balance(
                 address=account.address,
                 token_address=None if token_in.lower() == self.NATIVE_TOKEN.lower() else token_in
             )
-            
+
             if current_balance < amount:
                 raise ValueError(f"Insufficient balance. Required: {amount}, Available: {current_balance}")
-                
-            # Get optimal swap route
+
             route_data = self._get_swap_route(token_in, token_out, amount)
-            
-            # Get encoded swap data
             encoded_data = self._get_encoded_swap_data(route_data["routeSummary"], slippage)
-            
-            # Get router address from route data
             router_address = route_data["routerAddress"]
-            
-            # Handle token approval if not using native token
+
             if token_in.lower() != self.NATIVE_TOKEN.lower():
-                if token_in.lower() == "0x039e2fb66102314ce7b64ce5ce3e5183bc94ad38".lower():  # $S token
+                if token_in.lower() == "0x039e2fb66102314ce7b64ce5ce3e5183bc94ad38".lower():
                     amount_raw = self._web3.to_wei(amount, 'ether')
                 else:
                     token_contract = self._web3.eth.contract(
@@ -408,8 +389,7 @@ class SonicConnection(BaseConnection):
                     decimals = token_contract.functions.decimals().call()
                     amount_raw = int(amount * (10 ** decimals))
                 self._handle_token_approval(token_in, router_address, amount_raw)
-            
-            # Prepare transaction
+
             tx = {
                 'from': account.address,
                 'to': Web3.to_checksum_address(router_address),
@@ -419,40 +399,126 @@ class SonicConnection(BaseConnection):
                 'chainId': self._web3.eth.chain_id,
                 'value': self._web3.to_wei(amount, 'ether') if token_in.lower() == self.NATIVE_TOKEN.lower() else 0
             }
-            
-            # Estimate gas
+
             try:
                 tx['gas'] = self._web3.eth.estimate_gas(tx)
             except Exception as e:
                 logger.warning(f"Gas estimation failed: {e}, using default gas limit")
-                tx['gas'] = 500000  # Default gas limit
-            
-            # Sign and send transaction
+                tx['gas'] = 500000
+
             signed_tx = account.sign_transaction(tx)
             tx_hash = self._web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-            
-            # Log and return explorer link immediately
             tx_link = self._get_explorer_link(tx_hash.hex())
             return f"🔄 Swap transaction sent: {tx_link}"
-                
+
         except Exception as e:
             logger.error(f"Swap failed: {e}")
             raise
-    def perform_action(self, action_name: str, kwargs) -> Any:
-        """Execute a Sonic action with validation"""
-        if action_name not in self.actions:
-            raise KeyError(f"Unknown action: {action_name}")
 
-        load_dotenv()
-        
-        if not self.is_configured(verbose=True):
-            raise SonicConnectionError("Sonic is not properly configured")
+    # -------------------------------
+    # New method: Get wallet metrics by scanning the blockchain.
+    # -------------------------------
+    def get_wallet_metrics(self, wallet_address: str, start_block: int = None, end_block: int = None) -> Dict[
+        str, float]:
+        """
+        Scan the blockchain for the given wallet address and compute real metrics.
 
-        action = self.actions[action_name]
-        errors = action.validate_params(kwargs)
-        if errors:
-            raise ValueError(f"Invalid parameters: {', '.join(errors)}")
+        Metrics computed (all normalized to [0,1] using assumed thresholds):
+          - num_transactions: Total transactions (as sender or receiver)
+          - wallet_size: Current balance in ETH
+          - account_age: Time since first transaction (in seconds)
+          - avg_transaction_size: Average value of outgoing transactions (in ETH)
+          - transaction_frequency: Transactions per second
+          - overall_gain_loss: Net flow (incoming - outgoing)
+          - rug_involvement: Placeholder (DOWN influence)
+          - is_burner: 1 if very few transactions and low balance, else 0
 
-        method_name = action_name.replace('-', '_')
-        method = getattr(self, method_name)
-        return method(**kwargs)
+        Parameters:
+          wallet_address: The Ethereum address to scan.
+          start_block: Starting block number for the scan. (If None, defaults to current_block - 5000)
+          end_block: Ending block number for the scan. (If None, defaults to the latest block)
+
+        Note: Scanning from genesis can be extremely heavy. Adjust the block range as needed.
+        """
+        wallet_address = Web3.to_checksum_address(wallet_address)
+        current_block = self._web3.eth.get_block('latest', full_transactions=False)
+        end_block = end_block or current_block.number
+        start_block = start_block or max(0, end_block - 5000)
+
+        txs = []  # All transactions involving wallet
+        txs_sent = []  # Outgoing transactions
+        txs_received = []  # Incoming transactions
+        earliest_timestamp = None
+
+        logger.info(f"Scanning blocks {start_block} to {end_block} for wallet {wallet_address}...")
+
+        for block_num in range(start_block, end_block + 1):
+            try:
+                block = self._web3.eth.get_block(block_num, full_transactions=True)
+            except Exception as e:
+                logger.error(f"Error fetching block {block_num}: {e}")
+                continue
+
+            block_timestamp = block.timestamp
+            for tx in block.transactions:
+                tx_from = tx.get('from')
+                tx_to = tx.get('to')
+                if (tx_from and Web3.to_checksum_address(tx_from) == wallet_address) or \
+                        (tx_to and Web3.to_checksum_address(tx_to) == wallet_address):
+                    txs.append((tx, block_timestamp))
+                    if earliest_timestamp is None or block_timestamp < earliest_timestamp:
+                        earliest_timestamp = block_timestamp
+                    if tx_from and Web3.to_checksum_address(tx_from) == wallet_address:
+                        txs_sent.append((tx, block_timestamp))
+                    if tx_to and Web3.to_checksum_address(tx_to) == wallet_address:
+                        txs_received.append((tx, block_timestamp))
+
+        current_timestamp = current_block.timestamp
+
+        total_tx_count = len(txs)
+        normalized_tx_count = min(total_tx_count / 1000.0, 1.0)
+
+        try:
+            balance_wei = self._web3.eth.get_balance(wallet_address)
+            balance_eth = float(self._web3.from_wei(balance_wei, 'ether'))
+        except Exception as e:
+            logger.error(f"Error getting balance for {wallet_address}: {e}")
+            balance_eth = 0.0
+        normalized_balance = min(balance_eth / 1000.0, 1.0)
+
+        if earliest_timestamp is None:
+            account_age = 0
+        else:
+            account_age = current_timestamp - earliest_timestamp
+        normalized_account_age = min(account_age / 315360000.0, 1.0)
+
+        total_sent = sum(float(self._web3.from_wei(tx['value'], 'ether')) for tx, _ in txs_sent)
+        avg_tx_size = (total_sent / len(txs_sent)) if txs_sent else 0.0
+        normalized_avg_tx_size = min(avg_tx_size / 100.0, 1.0)
+
+        frequency = total_tx_count / (account_age if account_age > 0 else 1)
+        normalized_frequency = min(frequency / (1.0 / 60.0), 1.0)
+
+        total_incoming = sum(float(self._web3.from_wei(tx['value'], 'ether')) for tx, _ in txs_received)
+        net_flow = total_incoming - total_sent
+        normalized_net_flow = min(abs(net_flow) / 500.0, 1.0)
+
+        normalized_rug_involvement = 0.1
+        is_burner = 1.0 if (total_tx_count < 3 and balance_eth < 0.1) else 0.0
+
+        metrics = {
+            "num_transactions": normalized_tx_count,
+            "wallet_size": normalized_balance,
+            "account_age": normalized_account_age,
+            "avg_transaction_size": normalized_avg_tx_size,
+            "transaction_frequency": normalized_frequency,
+            "overall_gain_loss": normalized_net_flow,
+            "rug_involvement": normalized_rug_involvement,
+            "is_burner": is_burner
+        }
+
+        logger.info(f"Scanned wallet {wallet_address}: found {total_tx_count} transactions, "
+                    f"earliest tx at {earliest_timestamp if earliest_timestamp else 'N/A'}, "
+                    f"current balance {balance_eth} ETH")
+        logger.info(f"Computed metrics: {metrics}")
+        return metrics
