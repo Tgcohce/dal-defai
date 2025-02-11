@@ -7,7 +7,7 @@ import requests
     Returns: A dictionary containing ETH balance and token balances.
         _type_: dict _description_ Wallet balances in ETH and tokens.
 """
-class getWalletBalance:
+class getSizeOfWallet:
     def __init__(self, wallet_address, etherscan_api_key, covalent_api_key):
         self.wallet_address = wallet_address
         self.etherscan_api_key = etherscan_api_key
