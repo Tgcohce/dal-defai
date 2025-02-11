@@ -49,7 +49,7 @@ class isBurner:
                 time_diff = abs(s_data["timeStamp"] - r_data["timeStamp"])
                 if abs(r_data["value"] - s_data["value"]) < 0.001 and time_diff < 600:
                     burner_count += 1
-                    if burner_count > 3: 
+                    if burner_count > 10: 
                         return True
         
         
