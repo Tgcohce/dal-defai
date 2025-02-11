@@ -1,4 +1,5 @@
 import requests
+from datetime import datetime
 
 """_summary_ 
     returns an array of all the transaction for the given wallet in json format. 
@@ -21,7 +22,17 @@ class getTransactions:
         
         #If data return the results.
         if data["status"] == "1":
-            transactions = data["result"][:10000] #Limit to first 10,000 transactions
-            return transactions
+            return data["result"] #Limit to first 10,000 transactions [-10000:]
         else:
             return [] #If data is empty return an empty list    
+    
+    def get_wallet_start_date(self):
+        
+        #Get the start date of the wallet by checking the first transaction
+        transactions = self.fetch_transactions()
+        if transactions:
+            first_tx_time = int(transactions[0]["timeStamp"])
+            start_date = start_date = datetime.utcfromtimestamp(first_tx_time).strftime('%Y-%m-%d %H:%M:%S')
+            return start_date
+        else:
+            return None
