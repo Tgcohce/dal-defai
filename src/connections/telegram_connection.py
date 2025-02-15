@@ -34,6 +34,23 @@ class TelegramAPIError(TelegramConnectionError):
     pass
 
 
+# Helper function to run async tasks safely
+def run_async_task(coro):
+    try:
+        # Try to get the current running loop
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        # No running loop, so create a new one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        return loop.run_until_complete(coro)
+    else:
+        # Use run_coroutine_threadsafe to run the coroutine in the running loop
+        # This will block until the coroutine is complete and return the result
+        future = asyncio.run_coroutine_threadsafe(coro, loop)
+        return future.result()
+
+
 # A simple callable action that wraps a handler function.
 class CallableAction(Action):
     def __init__(self, name, parameters, description, handler):
@@ -161,12 +178,7 @@ class TelegramConnection(BaseConnection):
         if not chat_id_env:
             raise TelegramConfigurationError("Missing TELEGRAM_CHAT_ID in environment.")
         chat_id = int(chat_id_env)
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            return asyncio.run(self.send_message(chat_id, message))
-        else:
-            return asyncio.create_task(self.send_message(chat_id, message))
+        return run_async_task(self.send_message(chat_id, message))
 
     async def send_message(self, chat_id: int, message: str) -> None:
         try:
@@ -179,13 +191,13 @@ class TelegramConnection(BaseConnection):
     def _handle_reply_to_message_action(self, **kwargs):
         message_id = kwargs.get("message_id")
         reply_text = kwargs.get("reply_text")
-        chat_id = int(os.getenv("TELEGRAM_CHAT_ID"))
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            return asyncio.run(self.reply_to_message(chat_id, message_id, reply_text))
-        else:
-            return asyncio.create_task(self.reply_to_message(chat_id, message_id, reply_text))
+        if message_id is None or not reply_text:
+            raise ValueError("Missing required parameters for reply-to-message action")
+        chat_id_env = os.getenv("TELEGRAM_CHAT_ID")
+        if not chat_id_env:
+            raise TelegramConfigurationError("Missing TELEGRAM_CHAT_ID in environment.")
+        chat_id = int(chat_id_env)
+        return run_async_task(self.reply_to_message(chat_id, message_id, reply_text))
 
     async def reply_to_message(self, chat_id: int, message_id: int, reply_text: str) -> None:
         try:
@@ -201,13 +213,13 @@ class TelegramConnection(BaseConnection):
 
     def _handle_pin_message_action(self, **kwargs):
         message_id = kwargs.get("message_id")
-        chat_id = int(os.getenv("TELEGRAM_CHAT_ID"))
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            return asyncio.run(self.pin_message(chat_id, message_id))
-        else:
-            return asyncio.create_task(self.pin_message(chat_id, message_id))
+        if message_id is None:
+            raise ValueError("Missing 'message_id' parameter for pin-message action")
+        chat_id_env = os.getenv("TELEGRAM_CHAT_ID")
+        if not chat_id_env:
+            raise TelegramConfigurationError("Missing TELEGRAM_CHAT_ID in environment.")
+        chat_id = int(chat_id_env)
+        return run_async_task(self.pin_message(chat_id, message_id))
 
     async def pin_message(self, chat_id: int, message_id: int) -> None:
         try:
@@ -219,13 +231,13 @@ class TelegramConnection(BaseConnection):
 
     def _handle_unpin_message_action(self, **kwargs):
         message_id = kwargs.get("message_id")
-        chat_id = int(os.getenv("TELEGRAM_CHAT_ID"))
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            return asyncio.run(self.unpin_message(chat_id, message_id))
-        else:
-            return asyncio.create_task(self.unpin_message(chat_id, message_id))
+        if message_id is None:
+            raise ValueError("Missing 'message_id' parameter for unpin-message action")
+        chat_id_env = os.getenv("TELEGRAM_CHAT_ID")
+        if not chat_id_env:
+            raise TelegramConfigurationError("Missing TELEGRAM_CHAT_ID in environment.")
+        chat_id = int(chat_id_env)
+        return run_async_task(self.unpin_message(chat_id, message_id))
 
     async def unpin_message(self, chat_id: int, message_id: int) -> None:
         try:
@@ -237,13 +249,13 @@ class TelegramConnection(BaseConnection):
 
     def _handle_kick_user_action(self, **kwargs):
         user_id = kwargs.get("user_id")
-        chat_id = int(os.getenv("TELEGRAM_CHAT_ID"))
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            return asyncio.run(self.kick_user(chat_id, user_id))
-        else:
-            return asyncio.create_task(self.kick_user(chat_id, user_id))
+        if user_id is None:
+            raise ValueError("Missing 'user_id' parameter for kick-user action")
+        chat_id_env = os.getenv("TELEGRAM_CHAT_ID")
+        if not chat_id_env:
+            raise TelegramConfigurationError("Missing TELEGRAM_CHAT_ID in environment.")
+        chat_id = int(chat_id_env)
+        return run_async_task(self.kick_user(chat_id, user_id))
 
     async def kick_user(self, chat_id: int, user_id: int) -> None:
         try:
