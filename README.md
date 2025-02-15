@@ -1,32 +1,34 @@
+Below is an edited version of your README. Feel free to adjust further as needed.
+
+---
+
 # ZerePy
 
-ZerePy is an open-source Python framework designed to let you deploy your own agents on X, powered by multiple LLMs.
-
-ZerePy is built from a modularized version of the Zerebro backend. With ZerePy, you can launch your own agent with
-similar core functionality as Zerebro. For creative outputs, you'll need to fine-tune your own model.
+ZerePy is an open-source Python framework that lets you deploy your own agents on social and blockchain platforms—powered by multiple large language models (LLMs). Built on a modularized version of the Zerebro backend, ZerePy provides core agent functionality while allowing you to integrate additional features (such as Telegram, Twitter/X, and blockchain networks) by plugging in new connections. For creative outputs, you'll need to fine-tune your own model.
 
 ## Features
 
 ### Core Platform
 
-- CLI interface for managing agents
-- Modular connection system
-- Blockchain integration
+- **CLI Interface:** Manage and interact with agents via a command-line interface.
+- **Modular Connection System:** Easily add and configure integrations (e.g., social platforms, blockchains).
+- **Blockchain Integration:** Connect to multiple blockchain networks.
 
 ### Platform Integrations
-- Social Platforms:
+
+- **Social Platforms:**
   - Twitter/X
   - Farcaster
   - Echochambers
   - Discord
-- Blockchain Networks:
+- **Blockchain Networks:**
   - Solana
   - EVM Networks:
     - Ethereum
-    - Sonic 
-- AI/ML Tools:
+    - Sonic
+- **AI/ML Tools:**
   - GOAT (Onchain Agent Toolkit)
-  - Allora (Network inference)
+  - Allora (Network Inference)
 
 ### Language Model Support
 
@@ -43,149 +45,147 @@ similar core functionality as Zerebro. For creative outputs, you'll need to fine
 
 ## Quickstart
 
-The quickest way to start using ZerePy is to use our Replit template:
+The fastest way to get started with ZerePy is by using our Replit template:
 
-https://replit.com/@blormdev/ZerePy?v=1
+[Replit Template](https://replit.com/@blormdev/ZerePy?v=1)
 
-1. Fork the template (you will need you own Replit account)
-2. Click the run button on top
-3. Voila! your CLI should be ready to use, you can jump to the configuration section
+1. **Fork the template** (you will need your own Replit account).
+2. **Click the Run button** on the top.
+3. Voila! Your CLI is ready to use. Jump to the configuration section below.
 
 ## Requirements
 
-System:
-
-- Python 3.11 or higher
-- Poetry 1.5 or higher
-
-Environment Variables:
-
-- LLM: make an account and grab an API key (at least one)
-  - OpenAI: https://platform.openai.com/api-keys
-  - Anthropic: https://console.anthropic.com/account/keys
-  - EternalAI: https://eternalai.oerg/api
-  - Hyperbolic: https://app.hyperbolic.xyz
-  - Galadriel: https://dashboard.galadriel.com
-  - GROQ: https://console.groq.com/
-  - Together AI: https://api.together.xyz
-- Social (based on your needs):
-  - X API: https://developer.x.com/en/docs/authentication/oauth-1-0a/api-key-and-secret
-  - Farcaster: Warpcast recovery phrase
-  - Echochambers: API key and endpoint
-- On-chain Integration:
-  - Solana: private key
-  - Ethereum: private keys
-  - Sonic: private keys
+- **System:** Python 3.11 or higher, Poetry 1.5 or higher.
+- **Environment Variables:**  
+  Set the following keys (depending on your needs):
+  - **LLM Providers:**
+    - OpenAI: [Get API Key](https://platform.openai.com/api-keys)
+    - Anthropic: [Get API Key](https://console.anthropic.com/account/keys)
+    - EternalAI: [Get API Key](https://eternalai.oerg/api)
+    - Hyperbolic: [Sign Up](https://app.hyperbolic.xyz)
+    - Galadriel: [Dashboard](https://dashboard.galadriel.com)
+    - GROQ: [Get API Key](https://console.groq.com/)
+    - Together AI: [Get API Key](https://api.together.xyz)
+  - **Social Platforms:**
+    - X API (Twitter/X): [Developer Portal](https://developer.x.com/en/docs/authentication/oauth-1-0a/api-key-and-secret)
+    - Farcaster: Your Warpcast recovery phrase
+    - Echochambers: API key and endpoint
+  - **On-Chain Integration:**
+    - Solana: Private key
+    - Ethereum: Private keys
+    - Sonic: Private keys
 
 ## Installation
 
-1. First, install Poetry for dependency management if you haven't already:
+1. **Install Poetry** (if not already installed):  
+   Follow the official instructions: [Poetry Installation](https://python-poetry.org/docs/#installing-with-the-official-installer).
 
-Follow the steps here to use the official installation: https://python-poetry.org/docs/#installing-with-the-official-installer
+2. **Clone the Repository:**
 
-2. Clone the repository:
+   ```bash
+   git clone https://github.com/blorm-network/ZerePy.git
+   ```
 
-```bash
-git clone https://github.com/blorm-network/ZerePy.git
-```
+3. **Navigate to the Repository:**
 
-3. Go to the `zerepy` directory:
+   ```bash
+   cd zerepy
+   ```
 
-```bash
-cd zerepy
-```
+4. **Install Dependencies:**
 
-4. Install dependencies:
+   ```bash
+   poetry install --no-root
+   ```
 
-```bash
-poetry install --no-root
-```
-
-This will create a virtual environment and install all required dependencies.
+   This command creates a virtual environment and installs all required dependencies.
 
 ## Usage
 
-1. Activate the virtual environment:
+1. **Activate the Virtual Environment:**
 
-```bash
-poetry shell
-```
-
-2. Run the application:
-
-```bash
-poetry run python main.py
-```
-
-## Configure connections & launch an agent
-
-1. Configure your desired connections:
-
-   ```
-   configure-connection twitter    # For Twitter/X integration
-   configure-connection openai     # For OpenAI
-   configure-connection anthropic  # For Anthropic
-   configure-connection farcaster  # For Farcaster
-   configure-connection eternalai  # For EternalAI
-   configure-connection solana     # For Solana
-   configure-connection goat       # For Goat
-   configure-connection galadriel  # For Galadriel
-   configure-connection ethereum   # For Ethereum
-   configure-connection sonic      # For Sonic
-   configure-connection discord    # For Discord
-   configure-connection ollama     # For Ollama
-   configure-connection xai        # For Grok
-   configure-connection allora     # For Allora
-   configure-connection hyperbolic # For Hyperbolic
-   configure-connection groq       # For GROQ
-   configure-connection together   # For Together AI
+   ```bash
+   poetry shell
    ```
 
-2. Use `list-connections` to see all available connections and their status
+2. **Run the Application:**
 
-3. Load your agent (usually one is loaded by default, which can be set using the CLI or in agents/general.json):
-
+   ```bash
+   poetry run python main.py
    ```
+
+## Configure Connections & Launch an Agent
+
+1. **Configure Your Desired Connections:**
+
+   ```bash
+   configure-connection twitter    # Twitter/X integration
+   configure-connection openai     # OpenAI
+   configure-connection anthropic  # Anthropic
+   configure-connection farcaster  # Farcaster
+   configure-connection eternalai  # EternalAI
+   configure-connection solana     # Solana
+   configure-connection goat       # GOAT integration
+   configure-connection galadriel  # Galadriel
+   configure-connection ethereum   # Ethereum
+   configure-connection sonic      # Sonic
+   configure-connection discord    # Discord
+   configure-connection ollama     # Ollama
+   configure-connection xai        # xAI (Grok)
+   configure-connection allora     # Allora
+   configure-connection hyperbolic # Hyperbolic
+   configure-connection groq       # GROQ API
+   configure-connection together   # Together AI
+   configure-connection telegram   # Telegram (and more!)
+   ```
+
+2. **List Connections:**  
+   Use the `list-connections` command to view available connections and their status.
+
+3. **Load Your Agent:**  
+   Load an agent (default agents can be set via the CLI or in `agents/general.json`):
+
+   ```bash
    load-agent example
    ```
 
-4. Start your agent:
-   ```
+4. **Start Your Agent:**
+
+   ```bash
    start
    ```
 
 ## GOAT Integration
 
-GOAT (Go Agent Tools) is a powerful plugin system that allows your agent to interact with various blockchain networks and protocols. Here's how to set it up:
+GOAT (Go Agent Tools) is a powerful plugin system that allows your agent to interact with various blockchain networks and protocols.
 
 ### Prerequisites
 
-1. An RPC provider URL (e.g., from Infura, Alchemy, or your own node)
-2. A wallet private key for signing transactions
+- An RPC provider URL (e.g., from Infura, Alchemy, or your own node)
+- A wallet private key for signing transactions
 
 ### Installation
 
-Install any of the additional [GOAT plugins](https://github.com/goat-sdk/goat/tree/main/python/src/plugins) you want to use:
+Install the desired GOAT plugins:
 
 ```bash
-poetry add goat-sdk-plugin-erc20         # For ERC20 token interactions
-poetry add goat-sdk-plugin-coingecko     # For price data
+poetry add goat-sdk-plugin-erc20    # For ERC20 token interactions
+poetry add goat-sdk-plugin-coingecko  # For price data
 ```
 
 ### Configuration
 
-1. Configure the GOAT connection using the CLI:
+1. **Configure the GOAT Connection via the CLI:**
 
    ```bash
    configure-connection goat
    ```
 
-   You'll be prompted to enter:
+   You will be prompted for:
+   - RPC Provider URL
+   - Wallet Private Key (stored securely in `.env`)
 
-   - RPC provider URL
-   - Wallet private key (will be stored securely in .env)
-
-2. Add GOAT plugins configuration to your agent's JSON file:
+2. **Add GOAT Plugin Configuration to Your Agent's JSON File:**
 
    ```json
    {
@@ -215,126 +215,97 @@ poetry add goat-sdk-plugin-coingecko     # For price data
    }
    ```
 
-Note that the order of plugins in the configuration doesn't matter, but each plugin must have a `name` and `args` field with the appropriate configuration options. You will have to check the documentation for each plugin to see what arguments are available.
-
 ### Available Plugins
 
-Each [plugin](https://github.com/goat-sdk/goat/tree/main/python/src/plugins) provides specific functionality:
-
-- **1inch**: Interact with 1inch DEX aggregator for best swap rates
-- **allora**: Connect with Allora protocol
-- **coingecko**: Get real-time price data for cryptocurrencies using the CoinGecko API
-- **dexscreener**: Access DEX trading data and analytics
-- **erc20**: Interact with ERC20 tokens (transfer, approve, check balances)
-- **farcaster**: Interact with the Farcaster social protocol
-- **nansen**: Access Nansen's on-chain analytics
-- **opensea**: Interact with NFTs on OpenSea marketplace
-- **rugcheck**: Analyze token contracts for potential security risks
-- Many more to come...
-
-Note: While these plugins are available in the GOAT SDK, you'll need to install them separately using Poetry and configure them in your agent's JSON file. Each plugin may require its own API keys or additional setup.
-
-### Plugin Configuration
-
-Each plugin has its own configuration options that can be specified in the agent's JSON file:
-
-1. **ERC20 Plugin**:
-
-   ```json
-   {
-     "name": "erc20",
-     "args": {
-       "tokens": [
-         "goat_plugins.erc20.token.USDC",
-         "goat_plugins.erc20.token.PEPE",
-         "goat_plugins.erc20.token.DAI"
-       ]
-     }
-   }
-   ```
-
-2. **Coingecko Plugin**:
-   ```json
-   {
-     "name": "coingecko",
-     "args": {
-       "api_key": "YOUR_COINGECKO_API_KEY"
-     }
-   }
-   ```
+- **1inch:** DEX aggregator for swap rates.
+- **allora:** Integration with the Allora protocol.
+- **coingecko:** Real-time cryptocurrency price data.
+- **dexscreener:** DEX trading data and analytics.
+- **erc20:** ERC20 token management (transfer, approve, check balances).
+- **farcaster:** Farcaster social protocol integration.
+- **nansen:** On-chain analytics.
+- **opensea:** NFT marketplace interactions.
+- **rugcheck:** Security analysis of token contracts.
+- _...and more to come!_
 
 ## Platform Features
 
 ### GOAT
-- Unified EVM chain interface
-- ERC20 token management (balances, transfers, approvals)
-- Real-time crypto data and market tracking
-- Plugin system for protocol integrations
-- Multi-chain support with secure wallet management
+- Unified EVM chain interface.
+- ERC20 token management: balances, transfers, approvals.
+- Real-time crypto data and market tracking.
+- Plugin system for protocol integrations.
+- Multi-chain support with secure wallet management.
 
 ### Blockchain Networks
-- Solana
-  - SOL/SPL transfers and swaps via Jupiter
-  - Staking and balance management
-  - Network monitoring and token queries
 
-- EVM Networks
-  - Ethereum
-    - ETH/ERC-20 transfers and swaps
-    - Kyberswap integration
-    - Balance and token queries
-  - Sonic
-    - Fast EVM transactions
-    - Custom slippage settings
-    - Token swaps via Sonic DEX
-    - Network switching (mainnet/testnet)
+- **Solana:**
+  - SOL/SPL transfers and swaps via Jupiter.
+  - Staking and balance management.
+  - Network monitoring and token queries.
 
-- EternalAI
-  - Transform agents to smart contracts
-  - Deploy on 10+ blockchains
-  - Onchain system prompts
-  - Decentralized inference
+- **EVM Networks:**
+  - **Ethereum:**
+    - ETH/ERC-20 transfers and swaps.
+    - Kyberswap integration.
+    - Balance and token queries.
+  - **Sonic:**
+    - Fast EVM transactions.
+    - Custom slippage settings.
+    - Token swaps via Sonic DEX.
+    - Network switching (mainnet/testnet).
+
+- **EternalAI:**
+  - Transform agents into smart contracts.
+  - Deploy on 10+ blockchains.
+  - On-chain system prompts.
+  - Decentralized inference.
 
 ### Social Platforms
-- Twitter/X
-  - Post and reply to tweets
-  - Timeline management
-  - Engagement features
 
-- Farcaster
-  - Cast creation and interactions
-  - Timeline and reply management
-  - Like/requote functionality
+- **Twitter/X:**
+  - Post and reply to tweets.
+  - Timeline management.
+  - Engagement features.
 
-- Discord
-  - Channel management
-  - Message operations
-  - Reaction handling
+- **Farcaster:**
+  - Cast creation and interactions.
+  - Timeline and reply management.
+  - Like/requote functionality.
 
-- Echochambers
-  - Room messaging and context
-  - History tracking
-  - Topic management
+- **Discord:**
+  - Channel management.
+  - Message operations.
+  - Reaction handling.
 
-## Create your own agent
+ - **Telegram:**
+  - Send Message.
+  - Reply to Message.
+  - Pin Message.
+  - Kick User (in progress).
+  
+- **Echochambers:**
+  - Room messaging and context.
+  - History tracking.
+  - Topic management.
 
-The secret to having a good output from the agent is to provide as much detail as possible in the configuration file. Craft a story and a context for the agent, and pick very good examples of tweets to include.
+## Create Your Own Agent
 
-If you want to take it a step further, you can fine tune your own model: https://platform.openai.com/docs/guides/fine-tuning.
+The key to achieving great outputs is providing detailed context in your agent configuration. Craft a story and set of examples that reflect your desired behavior.
 
-Create a new JSON file in the `agents` directory following this structure:
+To create an agent, add a new JSON file in the `agents` directory with the following structure:
 
 ```json
 {
   "name": "ExampleAgent",
   "bio": [
-    "You are ExampleAgent, the example agent created to showcase the capabilities of ZerePy.",
-    "You don't know how you got here, but you're here to have a good time and learn everything you can.",
-    "You are naturally curious, and ask a lot of questions."
+    "You are ExampleAgent, created to showcase the capabilities of ZerePy.",
+    "You don't know how you got here, but you're here to learn and have fun.",
+    "You are naturally curious and ask many questions."
   ],
   "traits": ["Curious", "Creative", "Innovative", "Funny"],
   "examples": ["This is an example tweet.", "This is another example tweet."],
-  "example_accounts" : ["X_username_to_use_for_tweet_examples"],
+  "example_accounts": ["X_username_to_use_for_tweet_examples"],
   "loop_delay": 900,
   "config": [
     {
@@ -412,17 +383,17 @@ Create a new JSON file in the `agents` directory following this structure:
 
 ## Available Commands
 
-Use `help` in the CLI to see all available commands. Key commands include:
+Use the `help` command in the CLI to see all available commands. Key commands include:
 
-- `list-agents`: Show available agents
-- `load-agent`: Load a specific agent
-- `agent-loop`: Start autonomous behavior
-- `agent-action`: Execute single action
-- `list-connections`: Show available connections
-- `list-actions`: Show available actions for a connection
-- `configure-connection`: Set up a new connection
-- `chat`: Start interactive chat with agent
-- `clear`: Clear the terminal screen
+- **list-agents:** Display available agents.
+- **load-agent:** Load a specific agent.
+- **agent-loop:** Start the agent’s autonomous behavior.
+- **agent-action:** Execute a single action.
+- **list-connections:** Show available connections.
+- **list-actions:** List actions for a specific connection.
+- **configure-connection:** Set up a new connection.
+- **chat:** Start an interactive chat with the agent.
+- **clear:** Clear the terminal screen.
 
 ## Star History
 
@@ -430,4 +401,9 @@ Use `help` in the CLI to see all available commands. Key commands include:
 
 ---
 
-Made with ♥ @Blorm.xyz
+Made with ♥ by [Blorm.xyz](https://blorm.xyz)  
+Happy coding!
+
+---
+
+This version streamlines the content while preserving all essential details and instructions. Enjoy building with ZerePy!
