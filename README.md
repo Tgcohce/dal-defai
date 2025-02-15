@@ -1,6 +1,4 @@
-Below is an edited version of your README. Feel free to adjust further as needed.
 
----
 
 # ZerePy
 
