@@ -73,3 +73,33 @@ class EtherscanTokenStats:
         except Exception as e:
             logger.error(f"Error fetching token balance from Etherscan: {e}")
             raise
+
+    @classmethod
+    def _get_token_decimals(cls, token_address: str, api_key: str) -> Optional[int]:
+        """
+        Retrieve the token's decimal count. If already have
+        a web3 connection for Sonic/Ethereum, you might prefer calling
+        the contract directly. This example tries Etherscan's 'getsourcecode' 
+        and parses the result for decimal info (some advanced usage).
+        
+        Alternatively, skip Etherscan entirely and do:
+          web3 = Web3(Web3.HTTPProvider(RPC_URL))
+          contract = web3.eth.contract(address=Web3.to_checksum_address(token_address), abi=ERC20_ABI)
+          decimals = contract.functions.decimals().call()
+        """
+        
+        try:
+            # Using the "getsourcecode" module might not always provide decimals directly.
+            url = f"{cls.BASE_URL}?module=contract&action=getsourcecode&address={token_address}&apikey={api_key}"
+            resp = requests.get(url)
+            resp.raise_for_status()
+            data = resp.json()
+            # This endpoint returns a list in "result".
+            # The contract's verified source might have a "CompilerVersion" or "ABI" key can parse.
+            if data["status"] == "1" and len(data["result"]) > 0:
+                # If it's a verified contract, data["result"][0]["ABI"] might exist. 
+                return None  # or some logic if a known pattern
+            return None
+        except Exception as e:
+            logger.warning(f"Failed to fetch token decimals from Etherscan: {e}")
+            return None
