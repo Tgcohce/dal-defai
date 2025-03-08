@@ -5,12 +5,12 @@ import RightSidebar from "./components/rightSidebar";
 
 const App = () => {
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen bg-gray-50">
       {/* Left Sidebar */}
       <Sidebar />
 
       {/* Main Chat Window */}
-      <div className="flex-1 flex flex-col w-3/5">
+      <div className="flex-1 flex flex-col">
         <ChatWindow />
       </div>
 

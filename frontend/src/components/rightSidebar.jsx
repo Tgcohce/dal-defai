@@ -12,20 +12,23 @@ const RightSidebar = () => {
   };
 
   return (
-    <div className="w-64 bg-gray-800 text-white p-4 h-screen flex flex-col justify-between">
+    <div className="w-64 bg-gray-900 text-white p-6 h-screen flex flex-col justify-between border-l border-gray-700">
       {/* Progress Bar */}
       <div className="mb-6">
-        <h4 className="text-sm text-center mb-2">Progress to Next Unlock</h4>
-        <div className="w-full bg-gray-600 rounded-full h-2.5">
+        <h4 className="text-lg font-semibold text-center mb-4">Progress to Next Unlock</h4>
+        <div className="w-full bg-gray-700 rounded-full h-3">
           <div
-            className="bg-blue-500 h-2.5 rounded-full"
+            className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-300"
             style={{ width: `${progress}%` }}
           ></div>
         </div>
-        <div className="text-center text-sm mt-1">{progress}%</div>
+        <div className="text-center text-sm mt-2 text-gray-400">{progress}%</div>
       </div>
 
-      <button className="mt-4 bg-blue-500 text-white p-2 rounded-md w-full flex justify-center items-center" onClick={updateProgress}>
+      <button 
+        className="mt-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white p-3 rounded-lg w-full flex justify-center items-center hover:opacity-90 transition-all duration-300 shadow-lg"
+        onClick={updateProgress}
+      >
         <FaShareAlt className="mr-2" />
         Share Conversation
       </button>

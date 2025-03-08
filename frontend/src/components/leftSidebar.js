@@ -10,30 +10,32 @@ const Sidebar = () => {
 
   return (
     <div
-      className={`h-screen bg-gray-800 text-white p-4 transition-all duration-300 ${
+      className={`h-screen bg-gray-900 text-white transition-all duration-300 border-r border-gray-700 ${
         isOpen ? "w-64" : "w-16"
-      }`} // Sidebar width changes based on isOpen state
+      }`}
     >
-      {/* Header with Settings, Sign In Button, and Collapsible Arrow */}
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center p-6 border-b border-gray-700">
         <button
           onClick={toggleSidebar}
-          className="text-white text-2xl p-2 cursor-pointer hover:text-gray-400"
+          className="text-gray-400 hover:text-white transition-colors duration-200"
         >
           {isOpen ? <FaArrowLeft /> : <FaArrowRight />}
         </button>
-        {/* Content that stays visible while sidebar is open */}
+        
         {isOpen && (
-          <h2 className="text-lg font-bold">Curtis Portal</h2>
+          <h2 className="text-xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
+            Curtis Portal
+          </h2>
         )}
 
-        {/* Settings Icon */}
         {isOpen && (
-        <button onClick={() => alert("Settings Clicked")}>
-          <FaCog className="text-white text-2xl cursor-pointer hover:text-gray-400" />
-        </button>
+          <button 
+            onClick={() => alert("Settings Clicked")}
+            className="text-gray-400 hover:text-white transition-colors duration-200"
+          >
+            <FaCog />
+          </button>
         )}
-
       </div>
     </div>
   );
