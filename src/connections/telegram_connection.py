@@ -1,6 +1,7 @@
 import os
 import logging
 import asyncio
+import threading
 from typing import Dict, Any
 from dotenv import load_dotenv
 from telegram import Update
@@ -37,16 +38,12 @@ class TelegramAPIError(TelegramConnectionError):
 # Helper function to run async tasks safely
 def run_async_task(coro):
     try:
-        # Try to get the current running loop
         loop = asyncio.get_running_loop()
     except RuntimeError:
-        # No running loop, so create a new one
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         return loop.run_until_complete(coro)
     else:
-        # Use run_coroutine_threadsafe to run the coroutine in the running loop
-        # This will block until the coroutine is complete and return the result
         future = asyncio.run_coroutine_threadsafe(coro, loop)
         return future.result()
 
@@ -83,6 +80,9 @@ class TelegramConnection(BaseConnection):
             raise TelegramConfigurationError("Missing TELEGRAM_BOT_TOKEN in environment.")
         if not os.getenv("TELEGRAM_CHAT_ID"):
             raise TelegramConfigurationError("Missing TELEGRAM_CHAT_ID in environment.")
+        # Optionally, load the bot's username from env; default to "@CurtisSonicLoverBot"
+        if not os.getenv("TELEGRAM_BOT_USERNAME"):
+            os.environ["TELEGRAM_BOT_USERNAME"] = "@CurtisSonicLoverBot"
         logger.info("✅ SUCCESSFULLY CONFIGURED CONNECTION: telegram")
         return True
 
@@ -153,6 +153,10 @@ class TelegramConnection(BaseConnection):
         super().__init__(config)
         # Register command and message handlers.
         self._register_handlers()
+        # Thread and event loop for the bot
+        self._stop_event = threading.Event()
+        self._bot_loop = None
+        self._bot_thread = None
 
     def perform_action(self, *args, **kwargs):
         """
@@ -266,18 +270,93 @@ class TelegramConnection(BaseConnection):
             raise TelegramAPIError(f"Failed to kick user: {e}")
 
     def _register_handlers(self) -> None:
+        # Register a /start command handler and a catch-all message handler.
         self.app.add_handler(CommandHandler("start", self._start))
-        self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self._echo))
+        self.app.add_handler(MessageHandler(filters.ALL, self._handle_message))
         self.app.add_handler(CallbackQueryHandler(self._callback_handler))
 
     async def _start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         chat_id = update.effective_chat.id
-        await context.bot.send_message(chat_id=chat_id, text="Welcome to the Telegram bot!")
+        await context.bot.send_message(chat_id=chat_id, text="Welcome to the Telegram bot\!")
 
-    async def _echo(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def _handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         chat_id = update.effective_chat.id
-        text = update.message.text
-        await context.bot.send_message(chat_id=chat_id, text=f"You said: {text}")
+        
+        # Skip if there is no message
+        if not update.message:
+            logger.warning("Received update without message")
+            return
+            
+        # Handle text messages
+        if hasattr(update.message, "text") and update.message.text:
+            text = update.message.text
+            message_id = update.message.message_id
+            user_id = update.message.from_user.id if update.message.from_user else None
+            username = update.message.from_user.username if update.message.from_user else None
+            
+            sender_name = username or f"User{user_id}"
+            
+            logger.info(f"Received message in chat {chat_id} from {sender_name}: {text}")
+            
+            # Filter to only respond to messages that mention the bot or are direct messages
+            bot_username = os.getenv("TELEGRAM_BOT_USERNAME", "@CurtisSonicLoverBot").lower()
+            is_direct_message = update.effective_chat.type == "private" 
+            is_mentioned = bot_username.lower() in text.lower()
+            
+            # Check chat ID restriction - only respond in configured chat or direct messages
+            chat_id_env = os.getenv("TELEGRAM_CHAT_ID")
+            is_allowed_chat = chat_id_env and int(chat_id_env) == chat_id
+            
+            if is_direct_message or is_mentioned or is_allowed_chat:
+                # Generate a response using LLM
+                try:
+                    # First send typing indicator
+                    await context.bot.send_chat_action(chat_id=chat_id, action="typing")
+                    
+                    # Try to import the agent module to get access to the LLM
+                    try:
+                        from src.agent import active_agent
+                        if active_agent:
+                            # Prepare prompt
+                            prompt = f"{sender_name} says: {text}\n\nHow should Curtis respond to this message?"
+                            response = active_agent.prompt_llm(prompt)
+                            logger.info(f"Generated response using agent LLM: {response}")
+                        else:
+                            # Fallback to static response
+                            response = f"Hey there\! I am Curtis, the Sonic Labs evangelist\! Thanks for your message about '{text}'. Let me know how I can help you with anything memecoin or Sonic Labs related\!"
+                    except (ImportError, AttributeError) as e:
+                        logger.error(f"Could not import agent module: {e}")
+                        response = f"Hey there\! I am Curtis, the Sonic Labs evangelist\! Thanks for your message about '{text}'. Let me know how I can help you with anything memecoin or Sonic Labs related\!"
+                    
+                    await context.bot.send_message(
+                        chat_id=chat_id,
+                        text=response,
+                        reply_to_message_id=message_id
+                    )
+                    logger.info(f"SUCCESSFULLY responded to message in chat {chat_id}")
+                except Exception as e:
+                    logger.error(f"ERROR: Failed to respond to message: {e}", exc_info=True)
+                    # Try to send a fallback message
+                    try:
+                        await context.bot.send_message(
+                            chat_id=chat_id,
+                            text="Sorry, I am having trouble responding right now. Please try again later\!",
+                            reply_to_message_id=message_id
+                        )
+                    except:
+                        pass
+        else:
+            # Log non-text messages for debugging
+            logger.info(f"Received non-text message in chat {chat_id}")
+            
+            try:
+                await context.bot.send_message(
+                    chat_id=chat_id,
+                    text="Hey there\! I received your message, but I can only process text right now. How can I help you with Sonic Labs today?"
+                )
+                logger.info(f"SUCCESSFULLY acknowledged non-text message in chat {chat_id}")
+            except Exception as e:
+                logger.error(f"ERROR: Failed to acknowledge non-text message: {e}")
 
     async def _callback_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
@@ -285,6 +364,74 @@ class TelegramConnection(BaseConnection):
         data = query.data
         await query.edit_message_text(text=f"Button clicked: {data}")
 
+    async def _run_telegram_bot(self):
+        """Run the Telegram bot polling asynchronously"""
+        try:
+            await self.app.initialize()
+            await self.app.start()
+            logger.info("Telegram bot initialized and started successfully")
+            
+            # Start polling
+            await self.app.updater.start_polling(drop_pending_updates=True)
+            logger.info("Telegram polling started successfully")
+            
+            # Keep running until stop event is set
+            while not self._stop_event.is_set():
+                await asyncio.sleep(1)
+                
+        except Exception as e:
+            logger.error(f"Error in Telegram bot polling: {e}", exc_info=True)
+        finally:
+            # Clean shutdown
+            try:
+                await self.app.stop()
+                await self.app.shutdown()
+                logger.info("Telegram bot stopped and shutdown cleanly")
+            except Exception as e:
+                logger.error(f"Error during Telegram bot shutdown: {e}")
+
+    def _thread_worker(self):
+        """Thread worker function that sets up the event loop and runs the bot"""
+        try:
+            # Create new event loop for this thread
+            self._bot_loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self._bot_loop)
+            
+            # Run the async function
+            self._bot_loop.run_until_complete(self._run_telegram_bot())
+        except Exception as e:
+            logger.error(f"Error in Telegram thread worker: {e}", exc_info=True)
+        finally:
+            # Close the loop
+            try:
+                self._bot_loop.close()
+                logger.info("Telegram event loop closed")
+            except Exception as e:
+                logger.error(f"Error closing Telegram event loop: {e}")
+
     def run(self) -> None:
+        """Run the Telegram bot polling in a separate thread with its own event loop"""
         logger.info("Starting Telegram bot polling...")
-        self.app.run_polling()
+        
+        # Reset the stop event
+        self._stop_event.clear()
+        
+        try:
+            # Create and start the thread
+            self._bot_thread = threading.Thread(
+                target=self._thread_worker,
+                name="TelegramBot",
+                daemon=True
+            )
+            self._bot_thread.start()
+            logger.info(f"Telegram bot thread started with name '{self._bot_thread.name}'")
+        except Exception as e:
+            logger.error(f"Failed to start Telegram bot thread: {e}", exc_info=True)
+
+    def stop(self) -> None:
+        """Stop the Telegram bot polling"""
+        if self._bot_thread and self._bot_thread.is_alive():
+            logger.info("Stopping Telegram bot...")
+            self._stop_event.set()
+            self._bot_thread.join(timeout=5.0)
+            logger.info("Telegram bot stopped")
