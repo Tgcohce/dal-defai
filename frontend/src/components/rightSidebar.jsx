@@ -12,7 +12,7 @@ const RightSidebar = () => {
   };
 
   return (
-    <div className="w-64 bg-gray-900 text-white p-6 h-screen flex flex-col justify-between border-l border-gray-700">
+    <div className="w-64 bg-gray-900/95 backdrop-blur-sm text-white p-6 h-screen flex flex-col justify-between border-l border-gray-700/50">
       {/* Progress Bar */}
       <div className="mb-6">
         <h4 className="text-lg font-semibold text-center mb-4">Progress to Next Unlock</h4>
