@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import WelcomeMessage from './welcomeMessage';
 import { FaPaperPlane } from 'react-icons/fa'; // Import paper plane icon
 
@@ -6,10 +7,34 @@ const ChatWindow = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
 
+  // Fetch messages when the component mounts
+  useEffect(() => {
+    axios
+      .get("http://localhost:5000/api/messages") // Your backend API endpoint for fetching messages
+      .then((response) => {
+        setMessages(response.data); // Assuming response.data contains the messages
+      })
+      .catch((error) => {
+        console.error("Error fetching messages:", error);
+      });
+  }, []);
+
   const sendMessage = () => {
     if (input.trim()) {
-      setMessages([...messages, { text: input, sender: "user" }]);
+      const newMessage = { text: input, sender: "user" };
+      // Add the new message to the state locally
+      setMessages([...messages, newMessage]);
       setInput("");
+
+      // Send the new message to the backend
+      axios
+        .post("http://localhost:5000/api/messages", newMessage) // Your backend API endpoint for sending messages
+        .then((response) => {
+          console.log("Message sent successfully:", response.data);
+        })
+        .catch((error) => {
+          console.error("Error sending message:", error);
+        });
     }
   };
 
@@ -100,4 +125,5 @@ const ChatWindow = () => {
 };
 
 export default ChatWindow;
+
 
