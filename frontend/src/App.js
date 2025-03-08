@@ -1,5 +1,5 @@
 import React from "react";
-import Sidebar from "./components/sidebar";
+import Sidebar from "./components/leftSidebar";
 import ChatWindow from "./components/chatWindow";
 import RightSidebar from "./components/rightSidebar";
 
