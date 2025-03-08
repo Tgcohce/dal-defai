@@ -12,10 +12,15 @@ const ChatWindow = () => {
   };
 
   return (
-    <div className="w-3/4 h-screen flex flex-col">
+    <div className="flex-1 flex flex-col w-full h-screen">
       <div className="flex-1 p-4 overflow-y-auto bg-gray-100">
         {messages.map((msg, index) => (
-          <div key={index} className="mb-2">
+          <div
+            key={index}
+            className={`mb-2 p-3 rounded-lg max-w-3/4 ${
+              msg.sender === "user" ? "bg-blue-500 text-white ml-auto" : "bg-gray-300 text-gray-900"
+            }`}
+          >
             <span className="font-bold">{msg.sender}:</span> {msg.text}
           </div>
         ))}
@@ -23,12 +28,12 @@ const ChatWindow = () => {
       <div className="p-4 bg-white border-t flex">
         <input
           type="text"
-          className="flex-1 border p-2"
+          className="flex-1 border p-2 rounded-md"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Type a message..."
         />
-        <button className="ml-2 bg-blue-500 text-white p-2" onClick={sendMessage}>
+        <button className="ml-2 bg-blue-500 text-white p-2 rounded-md" onClick={sendMessage}>
           Send
         </button>
       </div>

@@ -1,14 +1,23 @@
 import React from "react";
 import Sidebar from "./components/sidebar";
 import ChatWindow from "./components/chatWindow";
+import RightSidebar from "./components/rightSidebar";
 
-function App() {
+const App = () => {
   return (
     <div className="flex h-screen">
-      <Sidebar/>
-      <ChatWindow/>
+      {/* Left Sidebar */}
+      <Sidebar />
+
+      {/* Main Chat Window */}
+      <div className="flex-1 flex flex-col w-3/5">
+        <ChatWindow />
+      </div>
+
+      {/* Right Sidebar */}
+      <RightSidebar />
     </div>
   );
-}
+};
 
 export default App;
