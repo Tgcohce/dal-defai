@@ -9,7 +9,7 @@ from web3.middleware import geth_poa_middleware
 from src.constants.abi import ERC20_ABI
 from src.connections.base_connection import BaseConnection, Action, ActionParameter
 from src.constants.networks import SONIC_NETWORKS
-from src.helpers.sonic.etherscan_reader import EtherscanReader
+from src.helpers.sonic.sonic_reader import SonicReader
 
 logger = logging.getLogger("connections.sonic_connection")
 

@@ -20,6 +20,7 @@ from src.connections.xai_connection import XAIConnection
 from src.connections.ethereum_connection import EthereumConnection
 from src.connections.together_connection import TogetherAIConnection
 from src.connections.telegram_connection import TelegramConnection
+from src.connections.knowledge_connection import KnowledgeConnection
 
 logger = logging.getLogger("connection_manager")
 
@@ -70,6 +71,8 @@ class ConnectionManager:
             return TogetherAIConnection
         elif class_name == "telegram":
              return TelegramConnection
+        elif class_name == "knowledge":
+             return KnowledgeConnection
         return None
 
     def _register_connection(self, config_dic: Dict[str, Any]) -> None:

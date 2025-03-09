@@ -1,2 +1,0 @@
-from getTransactions import getTransactions
-
