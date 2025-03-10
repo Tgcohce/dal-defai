@@ -2,6 +2,8 @@ import os
 import logging
 import asyncio
 import threading
+import tempfile
+import subprocess
 from typing import Dict, Any
 from dotenv import load_dotenv
 from telegram import Update
@@ -278,6 +280,115 @@ class TelegramConnection(BaseConnection):
     async def _start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         chat_id = update.effective_chat.id
         await context.bot.send_message(chat_id=chat_id, text="Welcome to the Telegram bot\!")
+    
+    async def extract_audio_from_video(self, video_path: str, output_path: str) -> bool:
+        """
+        Extract audio from a video file using ffmpeg.
+        
+        Args:
+            video_path: Path to the input video file
+            output_path: Path where to save the extracted audio
+            
+        Returns:
+            True if extraction was successful, False otherwise
+        """
+        try:
+            # First check if ffmpeg is installed and in the PATH
+            logger.info(f"Extracting audio from {video_path} to {output_path}")
+            
+            # Check if ffmpeg-python is available
+            try:
+                import ffmpeg
+                logger.info("Using ffmpeg-python for audio extraction")
+                
+                # Extract audio using ffmpeg-python
+                (
+                    ffmpeg
+                    .input(video_path)
+                    .output(output_path, acodec='pcm_s16le', ac=1, ar='16k')
+                    .overwrite_output()
+                    .run(quiet=True, capture_stdout=True, capture_stderr=True)
+                )
+                
+                if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                    logger.info(f"Successfully extracted audio to {output_path}")
+                    return True
+                else:
+                    logger.error(f"Audio extraction completed but output file is empty or missing")
+                    return False
+                    
+            except ImportError:
+                # Fall back to command line ffmpeg
+                logger.warning("ffmpeg-python not available, falling back to subprocess")
+                
+                # Use subprocess to call ffmpeg directly
+                cmd = [
+                    "ffmpeg", 
+                    "-i", video_path, 
+                    "-vn",  # Disable video
+                    "-acodec", "pcm_s16le",  # Convert to PCM WAV
+                    "-ac", "1",  # Mono
+                    "-ar", "16000",  # 16kHz sample rate
+                    "-y",  # Overwrite output file
+                    output_path
+                ]
+                
+                logger.info(f"Running command: {' '.join(cmd)}")
+                
+                process = subprocess.run(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True
+                )
+                
+                if process.returncode != 0:
+                    logger.error(f"ffmpeg failed with code {process.returncode}: {process.stderr}")
+                    return False
+                
+                if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                    logger.info(f"Successfully extracted audio to {output_path}")
+                    return True
+                else:
+                    logger.error(f"Audio extraction completed but output file is empty or missing")
+                    return False
+                
+        except Exception as e:
+            logger.error(f"Error extracting audio from video: {e}")
+            return False
+    
+    async def transcribe_voice(self, file_path: str) -> str:
+        """
+        Transcribe a voice message file using OpenAI Whisper.
+        
+        Args:
+            file_path: Path to the downloaded voice file
+            
+        Returns:
+            Transcribed text
+        """
+        try:
+            import whisper
+            
+            logger.info(f"Transcribing audio file: {file_path}")
+            
+            # Load the Whisper model - using base model for efficiency
+            model = whisper.load_model("base")
+            
+            # Transcribe the audio file
+            result = model.transcribe(file_path)
+            
+            logger.info(f"Transcription result: {result['text']}")
+            
+            # Return the transcribed text
+            return result["text"]
+        except ImportError:
+            error_msg = "Whisper not installed. Please install it using: pip install openai-whisper"
+            logger.error(error_msg)
+            return "I couldn't transcribe your message due to missing dependencies."
+        except Exception as e:
+            logger.error(f"Error transcribing voice message: {e}")
+            return "I had trouble understanding your voice message."
 
     async def _handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         chat_id = update.effective_chat.id
@@ -287,76 +398,224 @@ class TelegramConnection(BaseConnection):
             logger.warning("Received update without message")
             return
             
-        # Handle text messages
-        if hasattr(update.message, "text") and update.message.text:
-            text = update.message.text
-            message_id = update.message.message_id
-            user_id = update.message.from_user.id if update.message.from_user else None
-            username = update.message.from_user.username if update.message.from_user else None
-            
-            sender_name = username or f"User{user_id}"
-            
-            logger.info(f"Received message in chat {chat_id} from {sender_name}: {text}")
-            
-            # Filter to only respond to messages that mention the bot or are direct messages
-            bot_username = os.getenv("TELEGRAM_BOT_USERNAME", "@CurtisSonicLoverBot").lower()
-            is_direct_message = update.effective_chat.type == "private" 
-            is_mentioned = bot_username.lower() in text.lower()
-            
-            # Check chat ID restriction - only respond in configured chat or direct messages
-            chat_id_env = os.getenv("TELEGRAM_CHAT_ID")
-            is_allowed_chat = chat_id_env and int(chat_id_env) == chat_id
-            
-            if is_direct_message or is_mentioned or is_allowed_chat:
-                # Generate a response using LLM
+        # Get common sender info for any message type
+        message_id = update.message.message_id
+        user_id = update.message.from_user.id if update.message.from_user else None
+        username = update.message.from_user.username if update.message.from_user else None
+        sender_name = username or f"User{user_id}"
+        
+        logger.info(f"Processing message: ID={message_id}, chat={chat_id}, user={sender_name}")
+        logger.info(f"Message has voice: {hasattr(update.message, 'voice') and update.message.voice is not None}")
+        logger.info(f"Message has video: {hasattr(update.message, 'video') and update.message.video is not None}")
+        
+        try:
+            # Handle voice messages
+            if hasattr(update.message, 'voice') and update.message.voice:
+                logger.info(f"Processing voice message from {sender_name}")
                 try:
                     # First send typing indicator
                     await context.bot.send_chat_action(chat_id=chat_id, action="typing")
                     
-                    # Try to import the agent module to get access to the LLM
+                    # Create a temporary file
+                    with tempfile.NamedTemporaryFile(suffix='.ogg', delete=False) as temp_file:
+                        voice_path = temp_file.name
+                    
+                    # Get voice file
+                    media_file = await update.message.voice.get_file()
+                    logger.info(f"Voice file info: {media_file}")
+                    
+                    # Download the file
+                    await media_file.download_to_drive(voice_path)
+                    logger.info(f"Downloaded voice file to {voice_path}")
+                    
+                    if not os.path.exists(voice_path) or os.path.getsize(voice_path) == 0:
+                        raise Exception("Voice file download failed or file is empty")
+                    
+                    # Transcribe the audio directly
+                    transcription = await self.transcribe_voice(voice_path)
+                    logger.info(f"Voice transcription result: {transcription}")
+                    
+                    # Generate a response using LLM
                     try:
                         from src.agent import active_agent
                         if active_agent:
-                            # Prepare prompt
-                            prompt = f"{sender_name} says: {text}\n\nHow should Curtis respond to this message?"
+                            # Prepare prompt with transcription
+                            prompt = f"{sender_name} says (voice message): {transcription}\n\nHow should Curtis respond to this message?"
                             response = active_agent.prompt_llm(prompt)
-                            logger.info(f"Generated response using agent LLM: {response}")
+                            logger.info(f"Generated response to voice message using agent LLM: {response}")
                         else:
-                            # Fallback to static response
-                            response = f"Hey there\! I am Curtis, the Sonic Labs evangelist\! Thanks for your message about '{text}'. Let me know how I can help you with anything memecoin or Sonic Labs related\!"
+                            # Fallback
+                            response = f"I understood your voice message as: '{transcription}'. How can I help you with Sonic Labs today?"
                     except (ImportError, AttributeError) as e:
                         logger.error(f"Could not import agent module: {e}")
-                        response = f"Hey there\! I am Curtis, the Sonic Labs evangelist\! Thanks for your message about '{text}'. Let me know how I can help you with anything memecoin or Sonic Labs related\!"
+                        response = f"I understood your voice message as: '{transcription}'. How can I help you with Sonic Labs today?"
                     
+                    # Reply with the response
                     await context.bot.send_message(
                         chat_id=chat_id,
                         text=response,
                         reply_to_message_id=message_id
                     )
-                    logger.info(f"SUCCESSFULLY responded to message in chat {chat_id}")
+                    logger.info(f"SUCCESSFULLY responded to voice message in chat {chat_id}")
+                    
+                    # Clean up the temporary file
+                    if os.path.exists(voice_path):
+                        os.remove(voice_path)
                 except Exception as e:
-                    logger.error(f"ERROR: Failed to respond to message: {e}", exc_info=True)
-                    # Try to send a fallback message
+                    logger.error(f"ERROR: Failed to process voice message: {e}", exc_info=True)
                     try:
                         await context.bot.send_message(
                             chat_id=chat_id,
-                            text="Sorry, I am having trouble responding right now. Please try again later\!",
+                            text=f"Sorry, I couldn't process your voice message. Please try again or send a text message.",
                             reply_to_message_id=message_id
                         )
-                    except:
-                        pass
-        else:
-            # Log non-text messages for debugging
-            logger.info(f"Received non-text message in chat {chat_id}")
+                    except Exception as reply_err:
+                        logger.error(f"Failed to send error message: {reply_err}")
+                        
+            # Handle video messages
+            elif hasattr(update.message, 'video') and update.message.video:
+                logger.info(f"Processing video message from {sender_name}")
+                try:
+                    # First send typing indicator
+                    await context.bot.send_chat_action(chat_id=chat_id, action="typing")
+                    
+                    # Create temporary files
+                    with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as video_temp:
+                        video_path = video_temp.name
+                    
+                    with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as audio_temp:
+                        audio_path = audio_temp.name
+                    
+                    # Get video file
+                    media_file = await update.message.video.get_file()
+                    logger.info(f"Video file info: {media_file}")
+                    
+                    # Download the file
+                    await media_file.download_to_drive(video_path)
+                    logger.info(f"Downloaded video file to {video_path}, size: {os.path.getsize(video_path)}")
+                    
+                    if not os.path.exists(video_path) or os.path.getsize(video_path) == 0:
+                        raise Exception("Video file download failed or file is empty")
+                    
+                    # Extract audio from video
+                    success = await self.extract_audio_from_video(video_path, audio_path)
+                    
+                    if not success:
+                        raise Exception("Failed to extract audio from video")
+                    
+                    logger.info(f"Extracted audio to {audio_path}, size: {os.path.getsize(audio_path)}")
+                    
+                    # Transcribe the extracted audio
+                    transcription = await self.transcribe_voice(audio_path)
+                    logger.info(f"Video audio transcription result: {transcription}")
+                    
+                    # Generate a response using LLM
+                    try:
+                        from src.agent import active_agent
+                        if active_agent:
+                            # Prepare prompt with transcription
+                            prompt = f"{sender_name} says (video message): {transcription}\n\nHow should Curtis respond to this message?"
+                            response = active_agent.prompt_llm(prompt)
+                            logger.info(f"Generated response to video message using agent LLM: {response}")
+                        else:
+                            # Fallback
+                            response = f"I understood your video message as: '{transcription}'. How can I help you with Sonic Labs today?"
+                    except (ImportError, AttributeError) as e:
+                        logger.error(f"Could not import agent module: {e}")
+                        response = f"I understood your video message as: '{transcription}'. How can I help you with Sonic Labs today?"
+                    
+                    # Reply with the response
+                    await context.bot.send_message(
+                        chat_id=chat_id,
+                        text=response,
+                        reply_to_message_id=message_id
+                    )
+                    logger.info(f"SUCCESSFULLY responded to video message in chat {chat_id}")
+                    
+                    # Clean up the temporary files
+                    if os.path.exists(video_path):
+                        os.remove(video_path)
+                    if os.path.exists(audio_path):
+                        os.remove(audio_path)
+                except Exception as e:
+                    logger.error(f"ERROR: Failed to process video message: {e}", exc_info=True)
+                    try:
+                        await context.bot.send_message(
+                            chat_id=chat_id,
+                            text=f"Sorry, I couldn't process your video message. Please try again or send a text message.",
+                            reply_to_message_id=message_id
+                        )
+                    except Exception as reply_err:
+                        logger.error(f"Failed to send error message: {reply_err}")
             
-            try:
-                await context.bot.send_message(
-                    chat_id=chat_id,
-                    text="Hey there\! I received your message, but I can only process text right now. How can I help you with Sonic Labs today?"
-                )
-                logger.info(f"SUCCESSFULLY acknowledged non-text message in chat {chat_id}")
-            except Exception as e:
-                logger.error(f"ERROR: Failed to acknowledge non-text message: {e}")
+            # Handle text messages
+            elif hasattr(update.message, "text") and update.message.text:
+                text = update.message.text
+                
+                logger.info(f"Received text message in chat {chat_id} from {sender_name}: {text}")
+                
+                # Filter to only respond to messages that mention the bot or are direct messages
+                bot_username = os.getenv("TELEGRAM_BOT_USERNAME", "@CurtisSonicLoverBot").lower()
+                is_direct_message = update.effective_chat.type == "private" 
+                is_mentioned = bot_username.lower() in text.lower()
+                
+                # Check chat ID restriction - only respond in configured chat or direct messages
+                chat_id_env = os.getenv("TELEGRAM_CHAT_ID")
+                is_allowed_chat = chat_id_env and int(chat_id_env) == chat_id
+                
+                if is_direct_message or is_mentioned or is_allowed_chat:
+                    # Generate a response using LLM
+                    try:
+                        # First send typing indicator
+                        await context.bot.send_chat_action(chat_id=chat_id, action="typing")
+                        
+                        # Try to import the agent module to get access to the LLM
+                        try:
+                            from src.agent import active_agent
+                            if active_agent:
+                                # Prepare prompt
+                                prompt = f"{sender_name} says: {text}\n\nHow should Curtis respond to this message?"
+                                response = active_agent.prompt_llm(prompt)
+                                logger.info(f"Generated response using agent LLM: {response}")
+                            else:
+                                # Fallback to static response
+                                response = f"Hey there\! I am Curtis, the Sonic Labs evangelist\! Thanks for your message about '{text}'. Let me know how I can help you with anything memecoin or Sonic Labs related\!"
+                        except (ImportError, AttributeError) as e:
+                            logger.error(f"Could not import agent module: {e}")
+                            response = f"Hey there\! I am Curtis, the Sonic Labs evangelist\! Thanks for your message about '{text}'. Let me know how I can help you with anything memecoin or Sonic Labs related\!"
+                        
+                        await context.bot.send_message(
+                            chat_id=chat_id,
+                            text=response,
+                            reply_to_message_id=message_id
+                        )
+                        logger.info(f"SUCCESSFULLY responded to message in chat {chat_id}")
+                    except Exception as e:
+                        logger.error(f"ERROR: Failed to respond to message: {e}", exc_info=True)
+                        # Try to send a fallback message
+                        try:
+                            await context.bot.send_message(
+                                chat_id=chat_id,
+                                text="Sorry, I am having trouble responding right now. Please try again later\!",
+                                reply_to_message_id=message_id
+                            )
+                        except:
+                            pass
+            else:
+                # Log other message types
+                logger.info(f"Received unsupported message in chat {chat_id}, type: {type(update.message)}")
+                logger.info(f"Message attributes: {dir(update.message)}")
+                
+                try:
+                    await context.bot.send_message(
+                        chat_id=chat_id,
+                        text="Hey there\! I received your message, but I can only process text, voice, and video messages right now. How can I help you with Sonic Labs today?"
+                    )
+                    logger.info(f"SUCCESSFULLY acknowledged non-text message in chat {chat_id}")
+                except Exception as e:
+                    logger.error(f"ERROR: Failed to acknowledge non-text message: {e}")
+        except Exception as e:
+            logger.error(f"Uncaught exception in _handle_message: {e}", exc_info=True)
 
     async def _callback_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
