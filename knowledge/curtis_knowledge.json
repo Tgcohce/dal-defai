@@ -2,16 +2,37 @@
   "Sonic Labs Recent Updates": "Sonic Labs recently released a new version of their SDK with improved performance and compatibility with the latest Web3 standards. The throughput has increased by 15% in recent tests.",
   
   "Community FAQ": {
-    "What is Sonic Labs?": "Sonic Labs is an EVM-compatible Layer-1 blockchain (rebranded from Fantom) that leverages a DAG-based aBFT consensus for ultra-fast finality and high throughput.",
-    "How to stake S tokens?": "To stake S tokens, you can use the official Sonic Labs staking portal at https://staking.sonic.io or through compatible wallets like MetaMask by connecting to the Sonic network.",
-    "What's the minimum stake amount?": "The minimum stake amount is 1 S token, making it accessible to users with small holdings.",
-    "When will the next airdrop happen?": "The next airdrop is scheduled for Q3 2025, targeting early users accumulating Sonic Points."
-  },
+  "What is Sonic Labs?": "Sonic Labs is an EVM-compatible Layer-1 blockchain (rebranded from Fantom) that leverages a DAG-based aBFT consensus for ultra-fast finality and high throughput.",
+  "How to stake S tokens?": "To stake S tokens, you can use the official Sonic Labs staking portal at https://staking.sonic.io or through compatible wallets like MetaMask by connecting to the Sonic network.",
+  "What's the minimum stake amount?": "The minimum stake amount is 1 S token, making it accessible to users with small holdings.",
+  "When will the next airdrop happen?": "The next airdrop is scheduled for Q3 2025, targeting early users accumulating Sonic Points.",
+  "How can I earn more Sonic Points?": "To earn more Sonic Points, engage with the community on social media, participate in events, or complete special tasks available in the ecosystem.",
+  "What is the Sonic Labs consensus mechanism?": "Sonic Labs uses a DAG-based asynchronous Byzantine Fault Tolerant (aBFT) consensus that achieves finality in approximately 1 second, ensuring both speed and security.",
+  "What is the purpose of the Sonic token (S)?": "The Sonic token (S) is the native utility token of Sonic Labs, used for staking, transaction fees, governance, and interacting with decentralized applications (dApps) within the Sonic ecosystem.",
+  "How does the Sonic Labs ecosystem benefit developers?": "Sonic Labs offers low transaction fees, fast finality, and a robust SDK, providing developers with a high-performance blockchain environment for building decentralized applications.",
+  "Can I use MetaMask with Sonic Labs?": "Yes, you can connect your MetaMask wallet to the Sonic Labs network by adding the custom RPC for Sonic in MetaMask's network settings.",
+  "What is the fee structure on Sonic Labs?": "Sonic Labs uses a Fee Monetization (FeeM) model where developers can receive up to 90% of the gas fees from transactions in their dApps, making it highly developer-friendly.",
+  "How do I join the Sonic Labs community?": "You can join the Sonic Labs community by following them on social media, joining their Telegram or Discord groups, and participating in events or discussions about the ecosystem.",
+  "How is Sonic Labs different from other blockchains?": "Sonic Labs offers higher throughput (10,000 TPS under regular use) and lower latency compared to most Layer-1 blockchains, achieved through its unique aBFT consensus and DAG architecture.",
+  "Are there any partnerships with Sonic Labs?": "Yes, Sonic Labs has established partnerships with several DeFi platforms like Aave, Silo Finance, and Beefy Finance, and infrastructure providers like Chainlink and Alchemy.",
+  "What are Sonic Points, and how do they work?": "Sonic Points are loyalty points earned through network participation and interactions within the Sonic ecosystem. These points can be used for rewards, airdrops, or special community incentives.",
+  "How do I get involved in the Sonic Labs airdrop program?": "To get involved, users must hold a certain amount of S tokens and meet activity requirements set by Sonic Labs. Airdrop announcements will provide specific details on eligibility.",
+  "What are the key features of Sonic Labs?": "Key features include high throughput, ultra-fast finality, low fees, decentralized governance, and the unique Fee Monetization (FeeM) model for developers.",
+  "Can Sonic Labs support NFTs?": "Yes, Sonic Labs supports NFTs through its dApp ecosystem, enabling the creation and trade of NFTs with low fees and fast transaction speeds.",
+  "What are the security measures in place for Sonic Labs?": "Sonic Labs implements robust security protocols through its aBFT consensus, cryptographic techniques, and partnerships with security providers like Arkham.",
+  "What is the roadmap for Sonic Labs?": "The roadmap includes expanding the ecosystem with more dApps, further decentralization, integration of AI-driven tools, and reaching milestones in user adoption and market cap.",
+  "Is Sonic Labs available on mobile?": "Yes, Sonic Labs' ecosystem is accessible through mobile wallets like MetaMask and applications integrated with the network. There are plans for a mobile app in the future.",
+  "How can I get support if I have issues with Sonic Labs?": "For support, you can visit the Sonic Labs help center, join their Discord or Telegram channels for community support, or refer to the official documentation available on the Sonic Labs website."
+},
+
   
   "Technical Documentation": {
     "Consensus Mechanism": "Sonic Labs uses a DAG-based asynchronous Byzantine Fault Tolerant (aBFT) consensus that achieves finality in approximately 1 second.",
     "Transaction Throughput": "Sonic averages 10,000 TPS in regular operation, with peak tests reaching up to 400,000 TPS under optimal conditions.",
-    "Fee Structure": "Sonic's Fee Monetization (FeeM) model allows developers to receive up to 90% of gas fees from transactions in their dApps."
+    "Fee Structure": "Sonic's Fee Monetization (FeeM) model allows developers to receive up to 90% of gas fees from transactions in their dApps.",
+    "Smart Contract Capabilities": "Sonic Labs supports full Ethereum Virtual Machine (EVM) compatibility, enabling developers to deploy existing Ethereum-based smart contracts with minimal changes. The platform also provides additional tools for more complex contract logic, including built-in support for token standards (ERC-20, ERC-721, ERC-1155) and an enhanced oracle service for secure, real-time data feeds. With the ability to execute contracts quickly and at scale, Sonic Labs is optimized for decentralized finance (DeFi), gaming, and enterprise solutions.",
+    "Security and Decentralization": "Security on Sonic Labs is assured through its innovative aBFT consensus mechanism, which guarantees the network's resilience against Byzantine faults and malicious attacks. With a decentralized set of validators across multiple geographic regions, the network ensures high availability and fault tolerance. Moreover, Sonic Labs undergoes continuous security audits and collaborates with leading cybersecurity firms to ensure that the ecosystem remains safe from vulnerabilities and exploits.",
+    "Scalability": "One of Sonic Labs' defining features is its ability to scale without sacrificing performance. The DAG-based architecture allows the network to process thousands of transactions in parallel, reducing bottlenecks often experienced in traditional blockchain networks. As demand grows, the system automatically adjusts by adding more nodes and validators to maintain optimal performance, making Sonic Labs a future-proof solution for a wide range of use cases, from DeFi to enterprise-level applications."
   },
   
   "Ecosystem Partners": {
